@@ -35,8 +35,6 @@ export const translations = {
 
     // Table
     recentSales: "Recent Sales",
-    store: "Store",
-    date: "Date",
     totalSalesHeader: "Total Sales",
     categories: "Categories",
     actions: "Actions",
@@ -47,7 +45,8 @@ export const translations = {
 
     // Messages
     fillAllFields: "Please fill in all required fields",
-    categoryMismatch: "Category breakdown total ({total}) must equal total sales ({sales})",
+    categoryMismatch:
+      "Category breakdown total ({total}) must equal total sales ({sales})",
     failedToSave: "Failed to save sales data. Please try again.",
     deleteConfirm: "Are you sure you want to delete this record?",
     recordDeleted: "Record deleted successfully",
@@ -114,8 +113,6 @@ export const translations = {
 
     // Table
     recentSales: "آخر المبيعات",
-    store: "المتجر",
-    date: "التاريخ",
     totalSalesHeader: "إجمالي المبيعات",
     categories: "الفئات",
     actions: "الإجراءات",
@@ -126,7 +123,8 @@ export const translations = {
 
     // Messages
     fillAllFields: "يرجى ملء جميع الحقول المطلوبة",
-    categoryMismatch: "يجب أن يساوي مجموع الفئات ({total}) إجمالي المبيعات ({sales})",
+    categoryMismatch:
+      "يجب أن يساوي مجموع الفئات ({total}) إجمالي المبيعات ({sales})",
     failedToSave: "فشل حفظ بيانات المبيعات. يرجى المحاولة مرة أخرى.",
     deleteConfirm: "هل أنت متأكد من رغبتك في حذف هذا السجل؟",
     recordDeleted: "تم حذف السجل بنجاح",
