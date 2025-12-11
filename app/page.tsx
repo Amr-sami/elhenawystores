@@ -1,103 +1,161 @@
-import Image from "next/image";
+"use client"
+
+import { useState, useEffect } from "react"
+import { collection, query, orderBy, getDocs, deleteDoc, doc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { t } from "@/lib/translations"
+import type { Language } from "@/lib/translations"
+import SalesForm from "@/components/sales-form"
+import SalesTable from "@/components/sales-table"
+import AnalyticsDashboard from "@/components/analytics-dashboard"
+import { LanguageSwitcher } from "@/components/language-switcher"
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [sales, setSales] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [view, setView] = useState<"dashboard" | "analytics">("dashboard")
+  const [language, setLanguageState] = useState<Language>("en")
+  const [mounted, setMounted] = useState(false)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    const saved = localStorage.getItem("sales-language") as Language | null
+    if (saved && (saved === "en" || saved === "ar")) {
+      setLanguageState(saved)
+    }
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted) {
+      const htmlElement = document.documentElement
+      htmlElement.lang = language
+      htmlElement.dir = language === "ar" ? "rtl" : "ltr"
+    }
+  }, [language, mounted])
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang)
+    localStorage.setItem("sales-language", lang)
+  }
+
+  const fetchSales = async () => {
+    setLoading(true)
+    try {
+      const q = query(collection(db, "sales"), orderBy("date", "desc"))
+      const querySnapshot = await getDocs(q)
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      setSales(data)
+    } catch (error) {
+      console.error("Error fetching sales:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchSales()
+  }, [])
+
+  const handleSaleAdded = () => {
+    setEditingId(null)
+    fetchSales()
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm(t(language, "deleteConfirm"))) return
+    try {
+      await deleteDoc(doc(db, "sales", id))
+      fetchSales()
+    } catch (error) {
+      console.error("Error deleting:", error)
+    }
+  }
+
+  if (!mounted) {
+    return null
+  }
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header with Language Switcher */}
+        <div className="mb-8 sm:mb-12 flex justify-between items-start gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2 text-balance">
+              {t(language, "salesDashboard")}
+            </h1>
+            <p className="text-slate-400 text-sm sm:text-base">{t(language, "trackManageAnalyze")}</p>
+          </div>
+          <LanguageSwitcher language={language} setLanguage={setLanguage} />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+
+        {/* View Navigation */}
+        <div className="flex gap-3 mb-8">
+          <Button
+            onClick={() => setView("dashboard")}
+            className={`px-6 py-2 rounded-lg font-medium transition-all ${
+              view === "dashboard"
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-200"
+            }`}
+          >
+            {t(language, "dashboard")}
+          </Button>
+          <Button
+            onClick={() => setView("analytics")}
+            className={`px-6 py-2 rounded-lg font-medium transition-all ${
+              view === "analytics"
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-200"
+            }`}
+          >
+            {t(language, "analytics")}
+          </Button>
+        </div>
+
+        {/* Analytics View */}
+        {view === "analytics" ? (
+          <AnalyticsDashboard sales={sales} language={language} />
+        ) : (
+          /* Dashboard View - Original Layout */
+          <div className="grid gap-6 lg:gap-8 lg:grid-cols-3 xl:grid-cols-4">
+            {/* Form Section */}
+            <div className="lg:col-span-1 xl:col-span-1">
+              <SalesForm
+                onSaleAdded={handleSaleAdded}
+                editingId={editingId}
+                editingData={sales.find((s) => s.id === editingId)}
+                onEditCancel={() => setEditingId(null)}
+                language={language}
+              />
+            </div>
+
+            {/* Sales List Section */}
+            <div className="lg:col-span-2 xl:col-span-3">
+              <Card className="shadow-2xl border-0 bg-slate-800 text-white h-full">
+                <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-t-lg border-b-0">
+                  <CardTitle className="text-lg sm:text-xl">{t(language, "recentSales")}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  {loading ? (
+                    <p className="text-center text-slate-400">{t(language, "loading")}</p>
+                  ) : sales.length === 0 ? (
+                    <p className="text-center text-slate-400">{t(language, "noRecords")}</p>
+                  ) : (
+                    <SalesTable sales={sales} onEdit={setEditingId} onDelete={handleDelete} language={language} />
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
+  )
 }
