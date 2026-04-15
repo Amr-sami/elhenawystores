@@ -18,7 +18,7 @@ export default function BottomNav() {
   ]
 
   return (
-    <nav className="md:hidden fixed bottom-6 left-6 right-6 z-50">
+    <nav className="md:hidden fixed bottom-6 left-6 right-6 z-50 pb-[env(safe-area-inset-bottom)]">
       <div className="glass-panel flex items-center justify-around p-2 gap-1 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-white/10">
         {navItems.map((item) => {
           const isActive = pathname === item.href

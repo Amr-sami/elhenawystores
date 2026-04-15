@@ -52,7 +52,7 @@ export default function Home() {
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 items-start">
             {/* Form Section - Conditional Rendering */}
             {store !== "All" ? (
-              <div className="xl:col-span-4 sticky top-28 animate-enter">
+              <div className="xl:col-span-4 xl:sticky xl:top-28 animate-enter">
                 <GlassCard title={editingId ? t(language, "editRecord") : t(language, "addSales")}>
                   <SalesForm
                     onSaleAdded={handleSaleAdded}

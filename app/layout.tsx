@@ -39,21 +39,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${playfair.variable} ${dmSans.variable} ${cairo.variable}`}>
-      <body className="font-body antialiased bg-background text-foreground h-screen overflow-hidden">
+      <body className="font-body antialiased bg-background text-foreground min-h-screen md:h-screen md:overflow-hidden">
         <LanguageProvider>
           <StoreProvider>
             <SalesProvider>
-              <div className="relative h-screen flex overflow-hidden">
+              <div className="relative min-h-screen md:h-screen flex overflow-x-hidden md:overflow-hidden">
                 {/* Desktop Sidebar */}
                 <Sidebar />
                 
                 {/* Main Content Area */}
-                <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                <div className="flex-1 flex flex-col min-w-0 relative">
                   {/* Top Navigation */}
                   <TopNav />
                   
                   {/* Page Content - Scrollable */}
-                  <main className="flex-1 overflow-y-auto no-scrollbar pb-32 md:pb-10">
+                  <main className="flex-1 overflow-y-auto no-scrollbar pb-40 md:pb-10">
                     {children}
                   </main>
                   
