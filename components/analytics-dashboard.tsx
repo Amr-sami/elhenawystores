@@ -38,7 +38,7 @@ export default function AnalyticsDashboard() {
   // Filter sales based on store and date
   const filteredSales = useMemo(() => {
     return sales.filter((sale) => {
-      const saleDate = sale.date?.toDate ? sale.date.toDate() : new Date(sale.date)
+      const saleDate = (sale.date as any)?.toDate ? (sale.date as any).toDate() : new Date(sale.date as any)
       
       // Store filter
       if (store !== "All" && sale.store !== store) return false

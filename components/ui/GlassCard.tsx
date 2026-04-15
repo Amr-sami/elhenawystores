@@ -7,11 +7,12 @@ interface GlassCardProps {
   title?: string
   action?: React.ReactNode
   className?: string
+  style?: React.CSSProperties
 }
 
-export function GlassCard({ children, title, action, className }: GlassCardProps) {
+export function GlassCard({ children, title, action, className, style }: GlassCardProps) {
   return (
-    <div className={`glass-panel p-6 sm:p-8 animate-enter ${className}`}>
+    <div className={`glass-panel p-6 sm:p-8 animate-enter ${className}`} style={style}>
       {(title || action) && (
         <div className="flex items-center justify-between mb-8">
           {title && (

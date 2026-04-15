@@ -19,7 +19,7 @@ export function getEgyptDate(): string {
 }
 
 export function formatEgyptDate(date: Date | any): string {
-  const d = date?.toDate ? date.toDate() : new Date(date)
+  const d = (date as any)?.toDate ? (date as any).toDate() : new Date(date as any)
 
   const formatter = new Intl.DateTimeFormat("en-EG", {
     timeZone: "Africa/Cairo",

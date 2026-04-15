@@ -11,7 +11,7 @@ import { getEgyptDate } from "@/lib/date-utils"
 import { t } from "@/lib/translations"
 import { useLanguage } from "@/lib/language-context"
 import { useStore } from "@/lib/store-context"
-import { Sparkles, Save, X, Calculator, Plus, Minus } from "lucide-react"
+import { Sparkles, Save, X, Calculator, Plus, Minus, LayoutDashboard } from "lucide-react"
 
 interface SalesFormProps {
   onSaleAdded: () => void
@@ -41,7 +41,7 @@ export default function SalesForm({ onSaleAdded, editingId, editingData, onEditC
     }
 
     if (editingData && editingId) {
-      const editDate = editingData.date?.toDate ? editingData.date.toDate() : new Date(editingData.date)
+      const editDate = (editingData.date as any)?.toDate ? (editingData.date as any).toDate() : new Date(editingData.date as any)
       const dateStr = editDate.toISOString().split("T")[0]
       setSelectedStore(editingData.store)
       setDate(dateStr)
@@ -247,7 +247,7 @@ export default function SalesForm({ onSaleAdded, editingId, editingData, onEditC
                     <div key={cat.id} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">
-                          {t(language, cat.id)}
+                          {t(language, cat.id as any)}
                         </Label>
                         {cat.id === "perfume" && (
                           <span className="text-[9px] font-bold text-gold-500 uppercase tracking-widest opacity-80 animate-pulse">

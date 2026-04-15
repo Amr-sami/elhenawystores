@@ -83,8 +83,8 @@ export function getCategoryTrendData(sales: SaleRecord[], language: "en" | "ar")
 
   // Sort by date first
   const sortedSales = [...sales].sort((a, b) => {
-    const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date)
-    const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date)
+    const dateA = (a.date as any)?.toDate ? (a.date as any).toDate() : new Date(a.date as any)
+    const dateB = (b.date as any)?.toDate ? (b.date as any).toDate() : new Date(b.date as any)
     return dateA.getTime() - dateB.getTime()
   })
 
@@ -147,7 +147,7 @@ export function generateInsights(sales: SaleRecord[], language: "en" | "ar") {
   // 2. Peak Day Detection
   const days: Record<number, number> = {}
   sales.forEach(s => {
-    const d = s.date?.toDate ? s.date.toDate() : new Date(s.date)
+    const d = (s.date as any)?.toDate ? (s.date as any).toDate() : new Date(s.date as any)
     const day = d.getDay()
     days[day] = (days[day] || 0) + s.totalSales
   })
@@ -187,7 +187,7 @@ export function calculateCategoryGrowth(allSales: SaleRecord[], filteredSales: S
   if (!filteredSales || filteredSales.length === 0) return []
 
   // 1. Determine Current Period Range
-  const currentDates = filteredSales.map(s => s.date?.toDate ? s.date.toDate().getTime() : new Date(s.date).getTime())
+  const currentDates = filteredSales.map(s => (s.date as any)?.toDate ? (s.date as any).toDate().getTime() : new Date(s.date).getTime())
   const minDate = Math.min(...currentDates)
   const maxDate = Math.max(...currentDates)
   const duration = maxDate - minDate + (24 * 60 * 60 * 1000) // inclusive day
@@ -197,7 +197,7 @@ export function calculateCategoryGrowth(allSales: SaleRecord[], filteredSales: S
   const prevMinDate = minDate - duration
 
   const prevSales = allSales.filter(s => {
-    const d = s.date?.toDate ? s.date.toDate().getTime() : new Date(s.date).getTime()
+    const d = (s.date as any)?.toDate ? (s.date as any).toDate().getTime() : new Date(s.date as any).getTime()
     return d >= prevMinDate && d <= prevMaxDate
   })
 

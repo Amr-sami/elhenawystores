@@ -33,7 +33,7 @@ export default function BottomNav() {
               }`}
             >
               <Icon size={20} className={isActive ? "gold-shimmer" : ""} />
-              <span className="text-[10px] font-bold uppercase tracking-[0.1em]">{t(language, item.id)}</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.1em]">{t(language, item.id as any)}</span>
             </Link>
           )
         })}

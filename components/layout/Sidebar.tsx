@@ -50,7 +50,7 @@ export default function Sidebar() {
             >
               <div className="flex items-center gap-4">
                 <Icon size={20} className={isActive ? "gold-shimmer" : "group-hover:text-gold-400 transition-colors"} />
-                <span className="text-sm font-medium tracking-wide">{t(language, item.id)}</span>
+                <span className="text-sm font-medium tracking-wide">{t(language, item.id as any)}</span>
               </div>
               {isActive && <div className="w-1 h-4 bg-gold-500 rounded-full" />}
             </Link>

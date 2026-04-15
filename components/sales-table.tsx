@@ -17,7 +17,7 @@ export default function SalesTable({ sales, onEdit, onDelete }: SalesTableProps)
 
   const formatDate = (date: any) => {
     if (!date) return ""
-    const d = date.toDate ? date.toDate() : new Date(date)
+    const d = (date as any).toDate ? (date as any).toDate() : new Date(date as any)
     return d.toLocaleDateString(language === "ar" ? "ar-EG" : "en-EG", {
       day: "numeric",
       month: "short",
