@@ -1,34 +1,36 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Playfair_Display, DM_Sans, Cairo } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { LanguageProvider } from "@/lib/language-context"
+import { StoreProvider } from "@/lib/store-context"
 import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const playfair = Playfair_Display({ 
+  subsets: ["latin"],
+  variable: "--font-playfair",
+})
+
+const dmSans = DM_Sans({ 
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+})
+
+const cairo = Cairo({
+  subsets: ["arabic", "latin"],
+  variable: "--font-cairo",
+})
 
 export const metadata: Metadata = {
-  title: "Sales Tracker - Elhenawy & Konoz",
-  description: "Track daily sales for Elhenawy and Konoz stores",
-  generator: "v0.app",
-  icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
-  },
+  title: "Elhenawy Stores | Premium Retail Dashboard",
+  description: "Executive sales tracking and business intelligence for Elhenawy and Konoz stores",
+  generator: "Antigravity UI/UX Pro Max",
 }
+
+import { SalesProvider } from "@/lib/sales-context"
+import Sidebar from "@/components/layout/Sidebar"
+import TopNav from "@/components/layout/TopNav"
+import BottomNav from "@/components/layout/BottomNav"
 
 export default function RootLayout({
   children,
@@ -36,11 +38,36 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased`}>
-        {children}
-        <Analytics />
+    <html lang="en" suppressHydrationWarning className={`${playfair.variable} ${dmSans.variable} ${cairo.variable}`}>
+      <body className="font-body antialiased bg-background text-foreground h-screen overflow-hidden">
+        <LanguageProvider>
+          <StoreProvider>
+            <SalesProvider>
+              <div className="relative h-screen flex overflow-hidden">
+                {/* Desktop Sidebar */}
+                <Sidebar />
+                
+                {/* Main Content Area */}
+                <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                  {/* Top Navigation */}
+                  <TopNav />
+                  
+                  {/* Page Content - Scrollable */}
+                  <main className="flex-1 overflow-y-auto no-scrollbar pb-32 md:pb-10">
+                    {children}
+                  </main>
+                  
+                  {/* Mobile Navigation */}
+                  <BottomNav />
+                </div>
+              </div>
+              <Analytics />
+            </SalesProvider>
+          </StoreProvider>
+        </LanguageProvider>
       </body>
     </html>
   )
 }
+
+

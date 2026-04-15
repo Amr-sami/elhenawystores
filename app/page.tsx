@@ -1,161 +1,101 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { collection, query, orderBy, getDocs, deleteDoc, doc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useState } from "react"
+import { useSales } from "@/lib/sales-context"
+import { useLanguage } from "@/lib/language-context"
+import { useStore } from "@/lib/store-context"
 import { t } from "@/lib/translations"
-import type { Language } from "@/lib/translations"
 import SalesForm from "@/components/sales-form"
 import SalesTable from "@/components/sales-table"
-import AnalyticsDashboard from "@/components/analytics-dashboard"
-import { LanguageSwitcher } from "@/components/language-switcher"
+import { GlassCard } from "@/components/ui/GlassCard"
+import { LayoutDashboard } from "lucide-react"
 
 export default function Home() {
-  const [sales, setSales] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
+  const { sales, loading, deleteSale } = useSales()
+  const { language } = useLanguage()
+  const { store } = useStore()
+  
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [view, setView] = useState<"dashboard" | "analytics">("dashboard")
-  const [language, setLanguageState] = useState<Language>("en")
-  const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    const saved = localStorage.getItem("sales-language") as Language | null
-    if (saved && (saved === "en" || saved === "ar")) {
-      setLanguageState(saved)
-    }
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (mounted) {
-      const htmlElement = document.documentElement
-      htmlElement.lang = language
-      htmlElement.dir = language === "ar" ? "rtl" : "ltr"
-    }
-  }, [language, mounted])
-
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang)
-    localStorage.setItem("sales-language", lang)
-  }
-
-  const fetchSales = async () => {
-    setLoading(true)
-    try {
-      const q = query(collection(db, "sales"), orderBy("date", "desc"))
-      const querySnapshot = await getDocs(q)
-      const data = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      setSales(data)
-    } catch (error) {
-      console.error("Error fetching sales:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchSales()
-  }, [])
+  // Filter sales for the table based on store
+  const filteredSales = sales.filter((s) => store === "All" || s.store === store)
 
   const handleSaleAdded = () => {
     setEditingId(null)
-    fetchSales()
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm(t(language, "deleteConfirm"))) return
-    try {
-      await deleteDoc(doc(db, "sales", id))
-      fetchSales()
-    } catch (error) {
-      console.error("Error deleting:", error)
-    }
-  }
-
-  if (!mounted) {
-    return null
+    await deleteSale(id)
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header with Language Switcher */}
-        <div className="mb-8 sm:mb-12 flex justify-between items-start gap-4">
-          <div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2 text-balance">
-              {t(language, "salesDashboard")}
-            </h1>
-            <p className="text-slate-400 text-sm sm:text-base">{t(language, "trackManageAnalyze")}</p>
+    <div className="p-6 md:p-10 max-w-[1600px] mx-auto w-full">
+      {/* Editorial Page Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
+        <div className="animate-enter">
+          <div className="flex items-center gap-2 text-gold-500/60 mb-2">
+            <LayoutDashboard size={14} />
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em]">{t(language, "management")}</span>
           </div>
-          <LanguageSwitcher language={language} setLanguage={setLanguage} />
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-white tracking-tight leading-tight">
+            {t(language, "salesDashboard")}
+          </h1>
+          <p className="text-slate-500 text-sm md:text-base mt-2 max-w-md font-medium">
+            {t(language, "trackManageAnalyze")}
+          </p>
         </div>
-
-        {/* View Navigation */}
-        <div className="flex gap-3 mb-8">
-          <Button
-            onClick={() => setView("dashboard")}
-            className={`px-6 py-2 rounded-lg font-medium transition-all ${
-              view === "dashboard"
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                : "bg-slate-700 hover:bg-slate-600 text-slate-200"
-            }`}
-          >
-            {t(language, "dashboard")}
-          </Button>
-          <Button
-            onClick={() => setView("analytics")}
-            className={`px-6 py-2 rounded-lg font-medium transition-all ${
-              view === "analytics"
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                : "bg-slate-700 hover:bg-slate-600 text-slate-200"
-            }`}
-          >
-            {t(language, "analytics")}
-          </Button>
-        </div>
-
-        {/* Analytics View */}
-        {view === "analytics" ? (
-          <AnalyticsDashboard sales={sales} language={language} />
-        ) : (
-          /* Dashboard View - Original Layout */
-          <div className="grid gap-6 lg:gap-8 lg:grid-cols-3 xl:grid-cols-4">
-            {/* Form Section */}
-            <div className="lg:col-span-1 xl:col-span-1">
-              <SalesForm
-                onSaleAdded={handleSaleAdded}
-                editingId={editingId}
-                editingData={sales.find((s) => s.id === editingId)}
-                onEditCancel={() => setEditingId(null)}
-                language={language}
-              />
-            </div>
-
-            {/* Sales List Section */}
-            <div className="lg:col-span-2 xl:col-span-3">
-              <Card className="shadow-2xl border-0 bg-slate-800 text-white h-full">
-                <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-t-lg border-b-0">
-                  <CardTitle className="text-lg sm:text-xl">{t(language, "recentSales")}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  {loading ? (
-                    <p className="text-center text-slate-400">{t(language, "loading")}</p>
-                  ) : sales.length === 0 ? (
-                    <p className="text-center text-slate-400">{t(language, "noRecords")}</p>
-                  ) : (
-                    <SalesTable sales={sales} onEdit={setEditingId} onDelete={handleDelete} language={language} />
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
       </div>
-    </main>
+
+      <div className="space-y-10">
+          {/* Editorial Grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 items-start">
+            {/* Form Section - Conditional Rendering */}
+            {store !== "All" ? (
+              <div className="xl:col-span-4 sticky top-28 animate-enter">
+                <GlassCard title={editingId ? t(language, "editRecord") : t(language, "addSales")}>
+                  <SalesForm
+                    onSaleAdded={handleSaleAdded}
+                    editingId={editingId}
+                    editingData={sales.find((s) => s.id === editingId)}
+                    onEditCancel={() => setEditingId(null)}
+                  />
+                </GlassCard>
+              </div>
+            ) : null}
+
+            {/* List Section - Dynamic Column Span */}
+            <div className={store !== "All" ? "xl:col-span-8" : "xl:col-span-12"}>
+              <div className="flex items-center justify-between mb-6 px-2">
+                <div className="flex items-center gap-3">
+                   <div className="w-2 h-6 bg-gold-500 rounded-full" />
+                   <h3 className="text-xl font-display font-bold text-white tracking-tight">
+                     {store === "All" ? t(language, "recentSales") : t(language, store === "Elhenawy" ? "elhenawyStore" : "konozStore")}
+                   </h3>
+                </div>
+                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">
+                   {filteredSales.length} {t(language, "recentSales")}
+                </div>
+              </div>
+              
+              {loading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-gold-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : filteredSales.length === 0 ? (
+                <div className="text-center py-20 bg-secondary/20 rounded-xl border border-border-subtle">
+                  <p className="text-slate-500 font-medium">{t(language, "noRecords")}</p>
+                </div>
+              ) : (
+                <SalesTable 
+                  sales={filteredSales} 
+                  onEdit={setEditingId} 
+                  onDelete={handleDelete} 
+                />
+              )}
+            </div>
+          </div>
+      </div>
+    </div>
   )
 }

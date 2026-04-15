@@ -3,6 +3,10 @@ export const translations = {
     // Navigation
     dashboard: "Dashboard",
     analytics: "Analytics",
+    settings: "Settings",
+    management: "Management",
+    quickActions: "Quick Actions",
+    executiveSummary: "Executive Summary",
 
     // Header
     salesDashboard: "Sales Dashboard",
@@ -76,11 +80,20 @@ export const translations = {
     language: "Language",
     english: "English",
     arabic: "العربية",
+    accessManagement: "Access Management",
+    enterPassword: "Enter Management Password",
+    unlock: "Unlock Analytics",
+    invalidPassword: "Incorrect password. Please try again.",
   },
   ar: {
+    // ... items would be down there but I need to do both
     // Navigation
     dashboard: "لوحة التحكم",
     analytics: "التحليلات",
+    settings: "الإعدادات",
+    management: "الإدارة",
+    quickActions: "إجراءات سريعة",
+    executiveSummary: "الملخص التنفيذي",
 
     // Header
     salesDashboard: "لوحة مبيعات المتاجر",
@@ -154,6 +167,10 @@ export const translations = {
     language: "اللغة",
     english: "English",
     arabic: "العربية",
+    accessManagement: "إدارة الوصول",
+    enterPassword: "أدخل كلمة مرور الإدارة",
+    unlock: "فتح التحليلات",
+    invalidPassword: "كلمة مرور غير صحيحة. حاول مرة أخرى.",
   },
 }
 

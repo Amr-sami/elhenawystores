@@ -5,24 +5,25 @@ import { useState, useEffect } from "react"
 import { collection, addDoc, Timestamp, updateDoc, doc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { getEgyptDate } from "@/lib/date-utils"
 import { t } from "@/lib/translations"
-import type { Language } from "@/lib/translations"
+import { useLanguage } from "@/lib/language-context"
+import { useStore } from "@/lib/store-context"
+import { Sparkles, Save, X, Calculator, Plus, Minus } from "lucide-react"
 
 interface SalesFormProps {
   onSaleAdded: () => void
   editingId?: string | null
   editingData?: any
   onEditCancel?: () => void
-  language: Language
 }
 
-export default function SalesForm({ onSaleAdded, editingId, editingData, onEditCancel, language }: SalesFormProps) {
-  const [store, setStore] = useState<string>("")
+export default function SalesForm({ onSaleAdded, editingId, editingData, onEditCancel }: SalesFormProps) {
+  const { language } = useLanguage()
+  const { store } = useStore() // This is the 'Filter' store, but for ADDING we need a specific one
+  const [selectedStore, setSelectedStore] = useState<string>("Elhenawy")
   const [date, setDate] = useState<string>("")
   const [totalSales, setTotalSales] = useState<string>("")
   const [perfume, setPerfume] = useState<string>("")
@@ -34,10 +35,15 @@ export default function SalesForm({ onSaleAdded, editingId, editingData, onEditC
   const [showCategoryBreakdown, setShowCategoryBreakdown] = useState(false)
 
   useEffect(() => {
+    // If we have a global store selected, use it. Otherwise default to Elhenawy.
+    if (store !== "All") {
+      setSelectedStore(store)
+    }
+
     if (editingData && editingId) {
       const editDate = editingData.date?.toDate ? editingData.date.toDate() : new Date(editingData.date)
       const dateStr = editDate.toISOString().split("T")[0]
-      setStore(editingData.store)
+      setSelectedStore(editingData.store)
       setDate(dateStr)
       setTotalSales(editingData.totalSales?.toString() || "")
       setPerfume(editingData.perfume?.toString() || "")
@@ -45,24 +51,37 @@ export default function SalesForm({ onSaleAdded, editingId, editingData, onEditC
       setOriginalPerfumes(editingData.originalPerfumes?.toString() || "")
       setWallets(editingData.wallets?.toString() || "")
       setShowCategoryBreakdown(
-        editingData.store === "Elhenawy" &&
-          (editingData.perfume || editingData.watches || editingData.originalPerfumes || editingData.wallets),
+        editingData.perfume > 0 || editingData.watches > 0 || editingData.originalPerfumes > 0 || editingData.wallets > 0
       )
     } else {
       const egyptDate = getEgyptDate()
       setDate(egyptDate)
-      setStore("")
       setTotalSales("")
       setPerfume("")
       setWatches("")
       setOriginalPerfumes("")
       setWallets("")
-      setShowCategoryBreakdown(false)
     }
-  }, [editingData, editingId])
+  }, [editingData, editingId, store])
+
+  // NEW: Auto-calculation logic for Perfumes (Remainder category)
+  useEffect(() => {
+    if (selectedStore === "Elhenawy" && showCategoryBreakdown) {
+      const total = parseFloat(totalSales || "0")
+      const others = parseFloat(watches || "0") + parseFloat(originalPerfumes || "0") + parseFloat(wallets || "0")
+      const calculatedPerfume = Math.max(0, total - others)
+      
+      // Update perfume state as a string for the input
+      // Only update if it actually changes to avoid infinite loops
+      const currentPerfume = parseFloat(perfume || "0")
+      if (Math.abs(calculatedPerfume - currentPerfume) > 0.01) {
+        setPerfume(calculatedPerfume === 0 ? "" : calculatedPerfume.toFixed(2))
+      }
+    }
+  }, [totalSales, watches, originalPerfumes, wallets, selectedStore, showCategoryBreakdown])
 
   const validateCategoryTotal = () => {
-    if (store === "Elhenawy" && showCategoryBreakdown) {
+    if (selectedStore === "Elhenawy" && showCategoryBreakdown) {
       const perfumeVal = Number.parseFloat(perfume || "0")
       const watchesVal = Number.parseFloat(watches || "0")
       const originalPerfumesVal = Number.parseFloat(originalPerfumes || "0")
@@ -70,9 +89,11 @@ export default function SalesForm({ onSaleAdded, editingId, editingData, onEditC
       const categoryTotal = perfumeVal + watchesVal + originalPerfumesVal + walletsVal
       const totalVal = Number.parseFloat(totalSales || "0")
 
-      if (categoryTotal !== totalVal) {
+      if (Math.abs(categoryTotal - totalVal) > 0.01) {
         setError(
-          `Category breakdown total (${categoryTotal.toFixed(2)}) must equal total sales (${totalVal.toFixed(2)})`,
+          t(language, "categoryMismatch")
+            .replace("{total}", categoryTotal.toFixed(2))
+            .replace("{sales}", totalVal.toFixed(2))
         )
         return false
       }
@@ -84,8 +105,8 @@ export default function SalesForm({ onSaleAdded, editingId, editingData, onEditC
     e.preventDefault()
     setError("")
 
-    if (!store || !date || !totalSales) {
-      setError("Please fill in all required fields")
+    if (!selectedStore || !date || !totalSales) {
+      setError(t(language, "fillAllFields"))
       return
     }
 
@@ -96,17 +117,22 @@ export default function SalesForm({ onSaleAdded, editingId, editingData, onEditC
     setLoading(true)
     try {
       const saleData: any = {
-        store,
+        store: selectedStore,
         date: new Date(date),
         totalSales: Number.parseFloat(totalSales),
         timestamp: Timestamp.now(),
       }
 
-      if (store === "Elhenawy") {
+      if (selectedStore === "Elhenawy") {
         saleData.perfume = Number.parseFloat(perfume || "0")
         saleData.watches = Number.parseFloat(watches || "0")
         saleData.originalPerfumes = Number.parseFloat(originalPerfumes || "0")
         saleData.wallets = Number.parseFloat(wallets || "0")
+      } else {
+        saleData.perfume = 0
+        saleData.watches = 0
+        saleData.originalPerfumes = 0
+        saleData.wallets = 0
       }
 
       if (editingId) {
@@ -115,204 +141,167 @@ export default function SalesForm({ onSaleAdded, editingId, editingData, onEditC
         await addDoc(collection(db, "sales"), saleData)
       }
 
-      // Reset form
-      setStore("")
-      const egyptDate = getEgyptDate()
-      setDate(egyptDate)
       setTotalSales("")
       setPerfume("")
       setWatches("")
       setOriginalPerfumes("")
       setWallets("")
-      setShowCategoryBreakdown(false)
-
+      
       onSaleAdded()
     } catch (err) {
-      setError("Failed to save sales data. Please try again.")
-      console.error("Error:", err)
+      setError(t(language, "failedToSave"))
     } finally {
       setLoading(false)
     }
   }
 
-  const handleCancel = () => {
-    setError("")
-    const egyptDate = getEgyptDate()
-    setDate(egyptDate)
-    setStore("")
-    setTotalSales("")
-    setPerfume("")
-    setWatches("")
-    setOriginalPerfumes("")
-    setWallets("")
-    setShowCategoryBreakdown(false)
-    onEditCancel?.()
-  }
-
   return (
-    <Card className="shadow-2xl border-0 bg-slate-800 text-white sticky top-4 sm:top-6 lg:top-8">
-      <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-t-lg border-b-0">
-        <CardTitle className="text-lg sm:text-xl">
-          {editingId ? t(language, "editRecord") : t(language, "addSales")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="p-3 bg-red-900/50 text-red-200 rounded-lg text-sm border border-red-700">{error}</div>
-          )}
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm animate-enter">
+          {error}
+        </div>
+      )}
 
-          {/* Store Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="store" className="text-sm font-medium text-slate-200">
-              {t(language, "store")} *
-            </Label>
-            <Select
-              value={store}
-              onValueChange={(value) => {
-                setStore(value)
-                setShowCategoryBreakdown(false)
-              }}
-            >
-              <SelectTrigger id="store" className="bg-slate-700 border-slate-600 text-white">
-                <SelectValue placeholder={t(language, "store")} />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-700 border-slate-600">
-                <SelectItem value="Elhenawy">{t(language, "elhenawyStore")}</SelectItem>
-                <SelectItem value="Konoz">{t(language, "konozStore")}</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* Store Selection Pills - Only shown if viewing All Stores */}
+      {store === "All" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-slate-500">
+            <LayoutDashboard size={12} />
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">{t(language, "store")}</span>
           </div>
-
-          {/* Date Input */}
-          <div className="space-y-2">
-            <Label htmlFor="date" className="text-sm font-medium text-slate-200">
-              {t(language, "dateEgyptTZ")} *
-            </Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-slate-700 border-slate-600 text-white"
-            />
+          <div className="flex p-1 bg-secondary rounded-xl border border-border-subtle">
+            {["Elhenawy", "Konoz"].map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSelectedStore(id)}
+                className={`flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                  selectedStore === id 
+                    ? "bg-gold-500 text-primary-foreground shadow-lg" 
+                    : "text-slate-500 hover:text-white"
+                }`}
+              >
+                {t(language, id === "Elhenawy" ? "elhenawyStore" : "konozStore")}
+              </button>
+            ))}
           </div>
+        </div>
+      )}
 
-          {/* Total Sales */}
-          <div className="space-y-2">
-            <Label htmlFor="totalSales" className="text-sm font-medium text-slate-200">
-              {t(language, "totalSales")} *
-            </Label>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">
+            {t(language, "date")}
+          </Label>
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="bg-secondary border-border-subtle focus:border-gold-500/50 rounded-xl py-6"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">
+            {t(language, "totalSales")}
+          </Label>
+          <div className="relative">
             <Input
-              id="totalSales"
               type="number"
               step="0.01"
               placeholder="0.00"
               value={totalSales}
               onChange={(e) => setTotalSales(e.target.value)}
-              className="w-full bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+              className="bg-secondary border-border-subtle focus:border-gold-500/50 rounded-xl py-6 pl-10"
             />
+            <Calculator className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={16} />
           </div>
+        </div>
+      </div>
 
-          {/* Optional Category Breakdown Toggle */}
-          {store === "Elhenawy" && (
-            <div className="space-y-3 pt-4 border-t border-slate-700">
-              <button
-                type="button"
-                onClick={() => setShowCategoryBreakdown(!showCategoryBreakdown)}
-                className="text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
-              >
-                {showCategoryBreakdown ? t(language, "hideCategoryBreakdown") : t(language, "addCategoryBreakdown")}
-              </button>
+      {/* Category Breakdown Section */}
+      {selectedStore === "Elhenawy" && (
+        <div className="pt-4 border-t border-border-subtle space-y-6">
+          <button
+            type="button"
+            onClick={() => setShowCategoryBreakdown(!showCategoryBreakdown)}
+            className="group flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-gold-500 hover:text-gold-400 transition-colors"
+          >
+            <div className="w-6 h-6 rounded-full bg-gold-500/10 flex items-center justify-center group-hover:bg-gold-500/20">
+              {showCategoryBreakdown ? <Minus size={12} /> : <Plus size={12} />}
+            </div>
+            {t(language, showCategoryBreakdown ? "hideCategoryBreakdown" : "addCategoryBreakdown")}
+          </button>
 
               {showCategoryBreakdown && (
-                <div className="space-y-3 pt-3 bg-slate-700/50 p-3 rounded-lg">
-                  <p className="text-xs text-slate-400">
-                    {t(language, "categoryBreakdownNote")} {totalSales || "0.00"}
-                  </p>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="perfume" className="text-sm text-slate-200">
-                      {t(language, "perfume")}
-                    </Label>
-                    <Input
-                      id="perfume"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={perfume}
-                      onChange={(e) => setPerfume(e.target.value)}
-                      className="w-full bg-slate-600 border-slate-500 text-white placeholder-slate-400"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="watches" className="text-sm text-slate-200">
-                      {t(language, "watches")}
-                    </Label>
-                    <Input
-                      id="watches"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={watches}
-                      onChange={(e) => setWatches(e.target.value)}
-                      className="w-full bg-slate-600 border-slate-500 text-white placeholder-slate-400"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="originalPerfumes" className="text-sm text-slate-200">
-                      {t(language, "originalPerfumes")}
-                    </Label>
-                    <Input
-                      id="originalPerfumes"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={originalPerfumes}
-                      onChange={(e) => setOriginalPerfumes(e.target.value)}
-                      className="w-full bg-slate-600 border-slate-500 text-white placeholder-slate-400"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="wallets" className="text-sm text-slate-200">
-                      {t(language, "wallets")}
-                    </Label>
-                    <Input
-                      id="wallets"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={wallets}
-                      onChange={(e) => setWallets(e.target.value)}
-                      className="w-full bg-slate-600 border-slate-500 text-white placeholder-slate-400"
-                    />
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6 animate-enter">
+                  {[
+                    { id: "perfume", val: perfume, set: setPerfume },
+                    { id: "watches", val: watches, set: setWatches },
+                    { id: "originalPerfumes", val: originalPerfumes, set: setOriginalPerfumes },
+                    { id: "wallets", val: wallets, set: setWallets },
+                  ].map((cat) => (
+                    <div key={cat.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">
+                          {t(language, cat.id)}
+                        </Label>
+                        {cat.id === "perfume" && (
+                          <span className="text-[9px] font-bold text-gold-500 uppercase tracking-widest opacity-80 animate-pulse">
+                            {language === "ar" ? "حساب تلقائي" : "Auto-calculated"}
+                          </span>
+                        )}
+                      </div>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={cat.val}
+                        onChange={(e) => cat.set(e.target.value)}
+                        readOnly={cat.id === "perfume"}
+                        className={`border-border-subtle focus:border-gold-500/50 rounded-xl py-5 transition-all ${
+                          cat.id === "perfume" 
+                            ? "bg-gold-500/5 border-gold-500/20 text-gold-500/90 cursor-default" 
+                            : "bg-tertiary/50"
+                        }`}
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="pt-8 flex gap-3">
+        <Button 
+          type="submit" 
+          disabled={loading} 
+          className="flex-1 bg-gold-500 hover:bg-gold-400 text-primary-foreground font-bold uppercase tracking-widest py-7 rounded-xl shadow-lg shadow-gold-500/10 transition-all hover:scale-[1.02]"
+        >
+          {loading ? (
+            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          ) : (
+            <div className="flex items-center gap-2">
+              <Save size={18} />
+              {editingId ? t(language, "update") : t(language, "save")}
             </div>
           )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white">
-              {loading ? t(language, "saving") : editingId ? t(language, "update") : t(language, "save")}
-            </Button>
-            {editingId && (
-              <Button
-                type="button"
-                onClick={handleCancel}
-                variant="outline"
-                className="flex-1 bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600"
-              >
-                {t(language, "cancel")}
-              </Button>
-            )}
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        </Button>
+        
+        {editingId && (
+          <Button
+            type="button"
+            onClick={onEditCancel}
+            className="bg-secondary border border-border-subtle text-slate-400 hover:text-white px-8 rounded-xl"
+          >
+            <X size={18} />
+          </Button>
+        )}
+      </div>
+    </form>
   )
 }
